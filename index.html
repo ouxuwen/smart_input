@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        .container {
+            width: 500px;
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            height: 34px;
+            padding: 6px 12px;
+            font-size: 14px;
+            line-height: 1.42857143;
+            color: #555;
+            background-color: #fff;
+            background-image: none;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        p {
+            position: relative;
+            display: block;
+            padding: 10px 15px;
+            margin: 0;
+            margin-bottom: -1px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+
+        }
+
+        #map_list {
+            opacity: 0;
+
+        }
+
+        #map_list.show {
+            opacity: 1;
+
+        }
+
+        span {
+            background: yellow;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <input id="key_inp" type="text" placeholder="请输入关键字">
+        <div id="map_list"></div>
+    </div>
+
+
+</body>
+<script src="jquery.min.js"></script>
+<script src="N.js"></script>
+<script src="PYlib.js"></script>
+<script>
+    // 
+    $(function () {
+        var smartInp = {
+            keyInp: '',
+            mapList: '',
+            nameList: FriendNicknameList,
+
+            start: function () {
+                this.init();
+                this.bindInput();
+                this.bindClick();
+            },
+            init: function () {
+                this.keyInp = $('#key_inp');
+                this.mapList = $('#map_list');
+            },
+            //注册键盘事件
+            bindInput: function () {
+                var _this = this;
+                this.keyInp.on('keyup', function (e) {
+                    var key = e.target.value;
+                    console.log(key)
+                    if (!key) {
+
+                        _this.mapList.html('');
+                        _this.mapList.removeClass('show');
+                        return;
+                    }
+                    var engs = _this.mapEng(key);
+                    var zhs = _this.mapPY(key);
+                    //最多显示10个
+                    var result = engs.concat(zhs).splice(0, 10);
+
+                    _this.renderList(result);
+                    if (result.length > 0) {
+                        _this.mapList.addClass('show');
+
+                    } else {
+                        _this.mapList.removeClass('show');
+                    }
+
+                })
+            },
+            // 绑定list
+            renderList: function (arr) {
+                var html = '';
+                //console.log(arr)
+
+                arr.forEach(function (el) {
+                    //匹配高亮
+                    if (el.len) {
+                        html += '<p data-value=' + '"' + el.name + '"' + '>'
+                        el.name.split('').forEach(function (ele, i) {
+
+                            if (i >= el.level && i < el.level + el.len) {
+                                html += '<span>' + ele + '</span>';
+                            } else {
+                                html += ele;
+                            }
+                        })
+                        html += '</p>';
+                    } else {
+                        html += '<p>' + el.name + '</p>'
+                    }
+
+                })
+                this.mapList.html(html);
+            },
+            //先匹配英语OR中文
+            mapEng: function (e) {
+                var engs = [];
+                this.nameList.forEach(function (item) {
+                    if (decodeURI(item).indexOf(e) > -1) {
+                        engs.push({
+                            name: item,
+                            level: item.indexOf(e),
+                            len: e.length
+                        })
+                    }
+                })
+                return this.sortObj(engs);
+            },
+            //匹配中文拼音
+            mapPY: function (e) {
+                var zh = [];
+                this.nameList.forEach(function (item) {
+                    var deItem = decodeURI(item);
+                    // 匹配全拼&拼音首字母
+                    var i1 = PY.convertPYs(deItem)[0].indexOf(e);
+                    var i2 = PY.convertPYs(deItem)[1].indexOf(e);
+                    if (deItem.charCodeAt(0) <= 255) {
+                        return;
+                    }
+                    //  console.log(e, PY.convertPYs(deItem)[0], i1, i2);
+                    if (i1 > -1 || i2 > -1) {
+                        zh.push({
+                            name: decodeURI(item),
+                            level: i1 < i2 && i1 > -1 ? i1 : i2
+                        })
+                    }
+                }.bind(this))
+                return this.sortObj(zh);
+            },
+            //根据level优先级排序
+            sortObj: function (arr) {
+                return arr.sort(function (a, b) {
+                    return a.level - b.level;
+                });
+            },
+            //click
+            bindClick: function () {
+                this.mapList.on('click', function (e) {
+                    console.log($(e.target).attr('data-value'))
+                    if (e.target.nodeName == 'P') {
+                        this.keyInp.val($(e.target).attr('data-value'))
+                    }
+                    this.mapList.html('');
+                    this.mapList.removeClass('show');
+                }.bind(this))
+            }
+        }
+
+        //启动
+        smartInp.start()
+    })
+</script>
+
+</html>
